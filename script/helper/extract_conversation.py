@@ -1,6 +1,7 @@
 import os
 import json
 import pickle
+import re
 
 class ExtractConversation:
 
@@ -58,6 +59,10 @@ class ExtractConversation:
 
                     if qna_pair['question'] and qna_pair['answer']:
 
+                        qna_pair['question'] = self.__remove_html_tag(qna_pair['question'])
+
+                        qna_pair['answer']   = self.__remove_html_tag(qna_pair['answer'])
+
                         self.extracted_conversation[id].append(qna_pair)
 
                         qna_pair = { 'question': None, 'answer': None }
@@ -65,6 +70,10 @@ class ExtractConversation:
                     qna_pair[next_sentence_type] = sentence['content']
 
                 speaker = sentence['speaker']
+
+    def __remove_html_tag(self, text):
+
+        return re.sub(r'(<\s*[^>]*>)|(<\s*/\s*>)|(\s+)', r' ', text).strip()
 
     def __save_output_file(self):
 
