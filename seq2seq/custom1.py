@@ -2,12 +2,13 @@ from __future__ import print_function
 
 from keras.models import Model, load_model
 from keras.layers import Input, LSTM, Dense
+import tensorflow as tf
 
 import numpy as np
 import os, json, pickle
 
-BATCH_SIZE      = 24        # Batch size for training.
-EPOCHS          = 100       # Number of EPOCHS to train for.
+BATCH_SIZE      = 6        # Batch size for training.
+EPOCHS          = 110       # Number of EPOCHS to train for.
 LATENT_DIM      = 256       # Latent dimensionality of the encoding space.
 NUM_SAMPLES     = 10000     # Number of samples to train on.
                             # Path to the data txt file on disk.
@@ -255,6 +256,32 @@ class SeqToSeq:
         file_instance = open(self.MODEL_PATH + '/max_decoder_seq_length.bin', 'wb')
 
         pickle.dump(self.max_decoder_seq_length, file_instance)
+
+    def search(model, src_input, k=1, sequence_max_len=25):
+        # (log(1), initialize_of_zeros)
+        k_beam = [(0, [0]*(sequence_max_len+1))]
+
+        # l : point on target sentence to predict
+        for l in range(sequence_max_len):
+            all_k_beams = []
+            for prob, sent_predict in k_beam:
+                predicted = model.predict([np.array([src_input]), np.array([sent_predict])])[0]
+                # top k!
+                possible_k = predicted[l].argsort()[-k:][::-1]
+
+                # add to all possible candidates for k-beams
+                all_k_beams += [
+                    (
+                        sum(np.log(predicted[i][sent_predict[i+1]]) for i in range(l)) + np.log(predicted[l][next_wid]),
+                        list(sent_predict[:l+1])+[next_wid]+[0]*(sequence_max_len-l-1)
+                    )
+                    for next_wid in possible_k
+                ]
+
+            # top k
+            k_beam = sorted(all_k_beams)[-k:]
+
+        return k_beam
 
     def __create_text_one_hot_vector(self, text):
 
