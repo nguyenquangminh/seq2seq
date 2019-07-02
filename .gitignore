@@ -1,3 +1,5 @@
 .vscode
 .env
 seq2seq/model/*
+__pycache__
+*.pyc
